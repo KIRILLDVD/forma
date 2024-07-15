@@ -49,3 +49,23 @@ function ValidCaptcha() {
   }
   document.getElementById("bbq").innerHTML = output;
 }
+document.addEventListener("DOMContentLoaded", function (event) {
+  var form = document.getElementById("dsa");
+  form.addEventListener("submit", function (event) {
+    event.preventDefault();
+
+    var xhr = new XMLHttpRequest();
+    xhr.open("POST", "server.php", true);
+
+    xhr.onreadystatechange = function () {
+      if (xhr.readyState === 4 && xhr.status === 200) {
+        var response = JSON.parse(xhr.responseText);
+        console.log(response);
+        document.getElementById("response").innerHTML = response.message;
+      }
+    };
+
+    var formData = new FormData(this);
+    xhr.send(formData);
+  });
+});
