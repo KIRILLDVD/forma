@@ -1,69 +1,103 @@
 <?php
-session_start();
-$dbhost = 'localhost';
-$dbuser = 'root';
-$dbpass = '0000';
-$conn = new mysqli($dbhost, $dbuser, $dbpass, 'registration');
-if ($conn->connect_error) {
-  die("Connection failed: " . $conn->connect_error);
-}
-  $username = $_POST['name'];
-  $email = $_POST['email'];
-  $numberp =  $_POST['phone'];
-  $massage =  $_POST['texxt'];
-  $select =  $_POST['select'];
-  $user_check_query = "SELECT * FROM users WHERE username='$username' OR email='$email' LIMIT 1";
-  $result = mysqli_query($conn, $user_check_query);
-  $user = mysqli_fetch_assoc($result);
-  
-  if ($user) { 
-    if ($user['username'] === $username) {
-      if ($user['email'] === $email){
-      echo "errrrrors:такой пользователь уже есть!!";
-      exit();
-      }
+function processForm($email, $phone) {
+    $connection = new mysqli('localhost', 'root', '0000', 'registration');
+    if ($connection->connect_error) {
+        die("Connection failed: " . $connection->connect_error);
     }
 
-    if ($user['email'] === $email) {
-      if ($user['username'] === $username) {
-        echo "errrrrors:такой пользователь уже есть!!";
-        exit();
-      }
+    
+    $query = "SELECT * FROM users WHERE email = ? AND number = ?";
+    $stmt = $connection->prepare($query);
+    $stmt->bind_param('ss', $email, $phone);
+    $stmt->execute();
+    $result = $stmt->get_result();
+
+    if ($result->num_rows > 0) {
+    while ($row = $result->fetch_assoc()) {
+        $last_insert_id = $row['id'];
+
+
+$message = $_POST['texxt'];
+$title =$_POST['select'];
+$query = "INSERT INTO massages (id_user, message) VALUES (?, ?)";
+$stmt = $connection->prepare($query);
+$stmt->bind_param('is', $last_insert_id, $message);
+$stmt->execute();
+$stmt->close();
+$query = "INSERT INTO selc (id_user, selectr) VALUES (?, ?)";
+$stmt = $connection->prepare($query);
+$stmt->bind_param('is', $last_insert_id, $title);
+$stmt->execute();
+$stmt->close();
+
     }
-  }
-  $query = "INSERT INTO users (username, email, number) 
-                          VALUES('$username', '$email', '$numberp')";
-     mysqli_query($conn, $query);
-  $query1 = "INSERT INTO massages (message)
-                          VALUES('$massage')";
-                          
-        mysqli_query($conn, $query1);
-  $query2 = "INSERT INTO selc (selectr)
-                          VALUES('$select')";
-                          
-        mysqli_query($conn, $query2);   
-        $pdo = new PDO('mysql:host=localhost;dbname=registration', 'root', '0000');
+
+
+
+return true;
+    } else {
+   
+        $username = $_POST['name'];
+        $query = "INSERT INTO users (username, email, number) VALUES (?, ?, ?)";
+        $stmt = $connection->prepare($query);
+        $stmt->bind_param('sss',$username, $email, $phone);
+        $stmt->execute();
+        $stmt->close();
+
+        $last_insert_id = $connection->insert_id;
+
+        $message = $_POST['texxt'];
+        $title =$_POST['select'];
+        $query = "INSERT INTO massages (id_user, message) VALUES (?, ?)";
+        $stmt = $connection->prepare($query);
+        $stmt->bind_param('is', $last_insert_id, $message);
+        $stmt->execute();
+        $stmt->close();
+        $query = "INSERT INTO selc (id_user, selectr) VALUES (?, ?)";
+$stmt = $connection->prepare($query);
+$stmt->bind_param('is', $last_insert_id, $title);
+$stmt->execute();
+$stmt->close();
+        return true;
+    }
+    $connection->close();
+}
+
+
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    $email = $_POST['email'];
+    $phone = $_POST['phone'];
+    $message = $_POST['texxt'];
+    $username = $_POST['name'];
+    $title = $_POST['select'];
+
+    if (processForm($email, $phone)) {
+      $pdo = new PDO('mysql:host=localhost;dbname=registration', 'root', '0000');
 
         
-        $stmt = $pdo->prepare("SELECT * FROM users ORDER BY id DESC LIMIT 1");
-        $stmt->execute();
-        $row = $stmt->fetch(PDO::FETCH_ASSOC);
-        foreach ($row as $key => $value) {
-                echo '<p>'.$key.' : '.$value.'</p>';
-            }
-            $stmt = $pdo->prepare("SELECT * FROM massages ORDER BY id DESC LIMIT 1");
-            $stmt->execute();
-            $row = $stmt->fetch(PDO::FETCH_ASSOC);
-            foreach ($row as $key => $value) {
-                    echo '<p>'.$key.' : '.$value.'</p>';
-                }
-                $stmt = $pdo->prepare("SELECT * FROM selc ORDER BY id DESC LIMIT 1");
-        $stmt->execute();
-        $row = $stmt->fetch(PDO::FETCH_ASSOC);
-        foreach ($row as $key => $value) {
-                echo '<p>'.$key.' : '.$value.'</p>';
-            }
-        $pdo = null;
- 
-        $conn->close();
-  ?>
+      $stmt = $pdo->prepare("SELECT * FROM users ORDER BY id DESC LIMIT 1");
+      $stmt->execute();
+      $row = $stmt->fetch(PDO::FETCH_ASSOC);
+      foreach ($row as $key => $value) {
+              echo '<p>'.$key.' : '.$value.'</p>';
+          }
+          $stmt = $pdo->prepare("SELECT * FROM massages ORDER BY id DESC LIMIT 1");
+          $stmt->execute();
+          $row = $stmt->fetch(PDO::FETCH_ASSOC);
+          foreach ($row as $key => $value) {
+                  echo '<p>'.$key.' : '.$value.'</p>';
+              }
+              $stmt = $pdo->prepare("SELECT * FROM selc ORDER BY id DESC LIMIT 1");
+      $stmt->execute();
+      $row = $stmt->fetch(PDO::FETCH_ASSOC);
+      foreach ($row as $key => $value) {
+              echo '<p>'.$key.' : '.$value.'</p>';
+          }
+      $pdo = null;
+
+      
+    } else {
+        echo "Такой контакт уже существует.";
+    }
+}
+?>
